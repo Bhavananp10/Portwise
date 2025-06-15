@@ -1,23 +1,36 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ClientCard from "../components/ClientCard";
 import AddClientModal from "../components/AddClientModal";
+import { fetchClients, addClient } from "../services/api";
 
 export default function Dashboard() {
-  const [clients, setClients] = useState([
-    { id: "1", name: "Ravi Sharma", totalValue: 49200 },
-    { id: "2", name: "Anjali Mehta", totalValue: 37250 },
-  ]);
-
+  const [clients, setClients] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleAddClient = (newClient) => {
-    const id = Date.now().toString(); // temporary unique ID
-    const totalValue = 0;
-    setClients([...clients, { ...newClient, id, totalValue }]);
+  // Load from MongoDB
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const data = await fetchClients();
+        setClients(data);
+      } catch (err) {
+        console.error("Failed to load clients", err);
+      }
+    };
+    loadClients();
+  }, []);
+
+  // Save new client to backend
+  const handleAddClient = async (newClient) => {
+    try {
+      const saved = await addClient(newClient);
+      setClients([...clients, saved]); // update local state
+    } catch (err) {
+      alert("Failed to add client");
+    }
   };
 
-  // Filter clients based on search query
   const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -50,14 +63,14 @@ export default function Dashboard() {
       <div className="space-y-4">
         {filteredClients.length > 0 ? (
           filteredClients.map((client) => (
-            <ClientCard key={client.id} client={client} />
+            <ClientCard key={client._id} client={client} />
           ))
         ) : (
           <p className="text-gray-500 italic">No matching clients found.</p>
         )}
       </div>
 
-      {/* Add Modal */}
+      {/* Modal */}
       {showModal && (
         <AddClientModal
           onClose={() => setShowModal(false)}
